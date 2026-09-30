@@ -21,7 +21,7 @@ No crowding/occupancy data exists in any CTA feed — never claim it.
 as `X-API-Key` (the Custom Connector key). Base URL: `CTA_API_BASE`.
 
 ```bash
-export CTA_API_BASE=https://<railway-app>.up.railway.app
+export CTA_API_BASE=https://<vercel-app>.vercel.app
 export CONNECTOR_API_KEY=<custom.cta key>
 
 cta.py bus-arrivals --stpid 8417 --rt 22 [--top 5]
@@ -66,7 +66,7 @@ Templates live in `widgets/`. When the user asks a transit question:
 
 1. Run the matching `cta.py` command to get live data.
 2. Fill the template's placeholders and return via `widget.create`:
-   - `__API_BASE__` → the Railway URL (so the widget's JS can re-fetch
+   - `__API_BASE__` → the Vercel deployment URL (so the widget's JS can re-fetch
      directly from the phone every 20–30s and stay live).
    - Other `__PARAMS__` per template header comment.
 

@@ -36,15 +36,19 @@ CTA GTFS static ────────────────┘
    uvicorn app:app --host 0.0.0.0 --port 8000
    ```
 
-4. **Deploy** (Railway): push this repo to GitHub, create a Railway project
-   from the repo (it picks up the `Dockerfile` automatically). Set env vars:
+4. **Deploy** (Vercel, free): `vercel` from the repo root — it picks up
+   `vercel.json` and deploys `api/` as serverless functions (no background
+   poller; every request fetches live from CTA on demand). Set env vars:
    `CTA_TRAIN_API_KEY` (required), `CTA_BUS_API_KEY` (optional — add later),
    `CONNECTOR_API_KEY` (your "custom.cta" key for the CLI/widgets).
-   Note the public URL, e.g. `https://<app>.up.railway.app`.
+   Note the public URL, e.g. `https://chicago-transit.vercel.app`.
    Point a Cloudflare DNS record at it if you want a custom domain.
 
+   (`backend/` + `Dockerfile` remain for local dev or a container host —
+   same endpoints, plus a 30s background poller.)
+
 5. **Custom Connector in Muse**: register a connector with
-   - base URL = your Railway URL
+   - base URL = your Vercel URL
    - API key = `CONNECTOR_API_KEY`
    
    Install the skill (`skill/SKILL.md`) so Muse knows the CLI, endpoints,
@@ -53,7 +57,7 @@ CTA GTFS static ────────────────┘
 ## Try it
 
 ```bash
-export CTA_API_BASE=https://<your-app>.up.railway.app
+export CTA_API_BASE=https://<your-app>.vercel.app
 export CONNECTOR_API_KEY=<key>
 ./cli/cta.py --pretty fleet
 ./cli/cta.py --pretty train-arrivals --mapid 40380 --rt Red
