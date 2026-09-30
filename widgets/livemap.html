@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<!-- livemap.html — vehicles gliding live on a map.
+     Params: __TITLE__, __MODE__ (bus|train|all), __ROUTES__ (csv, e.g. "22,36"),
+             __API_BASE__. Markers animate via CSS transition; refresh 20s. -->
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,sans-serif;background:#0b1220;color:#eef2f7}
+#wrap{position:relative;height:100%;min-height:420px}
+#map{position:absolute;inset:0}
+.hud{position:absolute;top:12px;left:12px;right:12px;z-index:500;pointer-events:none}
+.hud .card{pointer-events:auto;background:rgba(11,18,32,.88);backdrop-filter:blur(8px);border:1px solid #22304a;border-radius:12px;padding:10px 14px;max-width:420px}
+h1{font-size:15px;font-weight:700}
+.sub{font-size:11px;color:#8ea0b8}
+.live{display:inline-block;width:7px;height:7px;border-radius:50%;background:#35d07f;margin-right:6px;animation:pulse 1.6s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.vmark{transition:transform 18s linear}
+.vicon{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.5)}
+.vicon.bus{background:#1d5fb8}.vicon.train{background:#b81d4e}
+.count{position:absolute;bottom:14px;right:14px;z-index:500;background:rgba(11,18,32,.88);border:1px solid #22304a;border-radius:10px;padding:8px 12px;font-size:13px;font-weight:700}
+</style></head><body>
+<div id="wrap">
+  <div id="map"></div>
+  <div class="hud"><div class="card"><h1>__TITLE__</h1>
+    <div class="sub"><span class="live"></span><span id="n">—</span> vehicles live · pinch to zoom</div></div></div>
+  <div class="count" id="count">—</div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const API="__API_BASE__", MODE="__MODE__", ROUTES="__ROUTES__".split(",").filter(Boolean);
+const KEY="";
+const map=L.map("map").setView([41.8781,-87.6298],12);
+L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+  {attribution:"© OpenStreetMap · © CARTO",maxZoom:19}).addTo(map);
+const markers={}, polylines=[];
+function icon(v){
+  const el=document.createElement("div");
+  el.className="vicon "+v.mode; el.textContent=(v.route||"?").toString().slice(0,4);
+  return L.divIcon({html:el.outerHTML,className:"vmark",iconSize:[30,30],iconAnchor:[15,15]});
+}
+async function drawShapes(){
+  for(const rt of ROUTES){
+    try{
+      const mode = MODE==="train"?"train":"bus";
+      const r=await fetch(`${API}/api/shape?mode=${mode}&rt=${encodeURIComponent(rt)}`,
+        {headers:KEY?{"X-API-Key":KEY}:{}});
+      const d=await r.json();
+      if(d.coords&&d.coords.length){
+        const line=L.polyline(d.coords,{color:MODE==="train"?"#e5486f":"#4f9cf0",weight:3,opacity:.55}).addTo(map);
+        polylines.push(line); map.fitBounds(line.getBounds().pad(0.15));
+      }
+    }catch(e){}
+  }
+}
+async function load(){
+  try{
+    const qs=new URLSearchParams({mode:MODE});
+    if(ROUTES.length) qs.set("rt",ROUTES.join(","));
+    const r=await fetch(`${API}/api/vehicles?${qs}`,{headers:KEY?{"X-API-Key":KEY}:{}});
+    const d=await r.json();
+    const seen=new Set();
+    for(const v of d.vehicles||[]){
+      seen.add(v.id);
+      const ll=[v.lat,v.lon];
+      if(markers[v.id]){ markers[v.id].setLatLng(ll); }
+      else{
+        markers[v.id]=L.marker(ll,{icon:icon(v)})
+          .bindTooltip(`<b>${v.mode==="bus"?"Bus":"Train"} ${v.route||""}</b><br>${v.dest||""}${v.speed_mph?`<br>${v.speed_mph} mph`:""}`)
+          .addTo(map);
+      }
+    }
+    for(const id of Object.keys(markers)) if(!seen.has(id)){ map.removeLayer(markers[id]); delete markers[id]; }
+    document.getElementById("n").textContent=d.count;
+    document.getElementById("count").textContent=d.count+" live";
+  }catch(e){}
+}
+drawShapes().then(load); setInterval(load,20000);
+</script></body></html>

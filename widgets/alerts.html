@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<!-- alerts.html — animated service alert cards.
+     Params: __TITLE__, __ROUTE__ (optional csv filter), __API_BASE__.
+     Refreshes every 60s. -->
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,sans-serif;background:#0b1220;color:#eef2f7;padding:16px}
+.wrap{max-width:560px;margin:0 auto}
+h1{font-size:17px;font-weight:700;margin-bottom:2px}
+.sub{font-size:12px;color:#8ea0b8;margin-bottom:14px}
+.live{display:inline-block;width:7px;height:7px;border-radius:50%;background:#35d07f;margin-right:6px;animation:pulse 1.6s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.alert{background:#131c2e;border:1px solid #22304a;border-left:4px solid #f0a53c;border-radius:12px;padding:14px 16px;margin-bottom:10px;animation:slide .45s ease}
+@keyframes slide{from{opacity:0;transform:translateY(8px)}}
+.alert h2{font-size:15px;font-weight:700;margin-bottom:4px}
+.alert p{font-size:13px;color:#b9c6d8;line-height:1.45}
+.alert .when{font-size:11px;color:#8ea0b8;margin-top:8px}
+.clear{background:#0f1a12;border:1px solid #1e3a28;border-left:4px solid #35d07f;border-radius:12px;padding:16px;text-align:center;font-size:14px;color:#9fe8bd}
+.foot{font-size:11px;color:#5c6f8a;margin-top:10px;text-align:right}
+</style></head><body>
+<div class="wrap">
+  <h1>__TITLE__</h1>
+  <div class="sub"><span class="live"></span>CTA service alerts · updates every minute</div>
+  <div id="list"><div class="clear">Loading…</div></div>
+  <div class="foot" id="stamp"></div>
+</div>
+<script>
+const API="__API_BASE__", ROUTE="__ROUTE__", KEY="";
+async function load(){
+  try{
+    let url=`${API}/api/alerts`;
+    if(ROUTE) url+=`?rt=${encodeURIComponent(ROUTE)}`;
+    const d=await (await fetch(url,{headers:KEY?{"X-API-Key":KEY}:{}})).json();
+    const el=document.getElementById("list"), items=d.alerts||[];
+    el.innerHTML = items.length ? items.slice(0,12).map(a=>{
+      const when=[a.event_start,a.event_end].filter(Boolean).join(" → ");
+      return `<div class="alert"><h2>⚠️ ${a.headline||"Service alert"}</h2>
+        <p>${a.short||""}</p>${when?`<div class="when">${when}</div>`:""}</div>`;
+    }).join("") : `<div class="clear">✅ No active alerts. Service is running normally.</div>`;
+    document.getElementById("stamp").textContent="Updated "+new Date().toLocaleTimeString();
+  }catch(e){}
+}
+load(); setInterval(load,60000);
+</script></body></html>

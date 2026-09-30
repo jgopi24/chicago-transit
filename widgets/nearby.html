@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<!-- nearby.html — stops near a place, on a map + list.
+     Params: __PLACE__ (e.g. "Willis Tower"), __LAT__, __LON__,
+             __API_BASE__. Tap a stop for live arrivals hint. -->
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,sans-serif;background:#0b1220;color:#eef2f7}
+#map{height:46vh;min-height:280px}
+.list{padding:14px 16px;max-width:560px;margin:0 auto}
+h1{font-size:17px;font-weight:700}
+.sub{font-size:12px;color:#8ea0b8;margin:2px 0 12px}
+.row{display:flex;gap:12px;align-items:center;padding:10px 2px;border-top:1px solid #1e2a42}
+.dot{width:12px;height:12px;border-radius:50%;flex:none}
+.dot.bus{background:#4f9cf0}.dot.rail_station{background:#f06a96}.dot.rail_platform{background:#b98cf0}
+.nm{font-size:14px;font-weight:600}
+.mt{font-size:11px;color:#8ea0b8;margin-top:2px}
+.d{margin-left:auto;font-size:13px;color:#8ea0b8;font-variant-numeric:tabular-nums;white-space:nowrap}
+</style></head><body>
+<div id="map"></div>
+<div class="list">
+  <h1>Transit near __PLACE__</h1>
+  <div class="sub" id="sub">finding stops…</div>
+  <div id="rows"></div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const API="__API_BASE__", LAT=parseFloat("__LAT__"), LON=parseFloat("__LON__"), KEY="";
+const map=L.map("map").setView([LAT,LON],15);
+L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+  {attribution:"© OpenStreetMap · © CARTO",maxZoom:19}).addTo(map);
+L.marker([LAT,LON]).addTo(map).bindTooltip("You are here").openTooltip();
+(async()=>{
+  try{
+    const d=await (await fetch(`${API}/api/nearby?lat=${LAT}&lon=${LON}&radius_m=800&limit=14`,
+      {headers:KEY?{"X-API-Key":KEY}:{}})).json();
+    const stops=d.stops||[];
+    document.getElementById("sub").textContent=`${stops.length} stops within ~800 m`;
+    document.getElementById("rows").innerHTML=stops.map(s=>{
+      const kind=s.kind==="bus_stop"?"bus":"rail";
+      const label=s.kind==="rail_station"?"L station":s.kind==="rail_platform"?"L platform":"Bus stop";
+      L.circleMarker([s.lat,s.lon],{radius:7,color:kind==="bus"?"#4f9cf0":"#f06a96",fillOpacity:.9})
+        .bindTooltip(`<b>${s.name}</b><br>${label}`).addTo(map);
+      return `<div class="row"><div class="dot ${s.kind}"></div>
+        <div><div class="nm">${s.name}</div><div class="mt">${label}${s.stop_code?" · stop #"+s.stop_code:""}</div></div>
+        <div class="d">${s.distance_m} m</div></div>`;
+    }).join("");
+  }catch(e){ document.getElementById("sub").textContent="Could not reach the connector."; }
+})();
+</script></body></html>

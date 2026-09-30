@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<!-- fleet.html — live fleet count with per-mode breakdown.
+     Params: __API_BASE__. Refreshes every 30s. -->
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,sans-serif;background:#0b1220;color:#eef2f7;padding:16px}
+.card{background:#131c2e;border:1px solid #22304a;border-radius:14px;padding:18px;max-width:520px;margin:0 auto}
+h1{font-size:17px;font-weight:700}
+.sub{font-size:12px;color:#8ea0b8;margin:2px 0 14px}
+.live{display:inline-block;width:7px;height:7px;border-radius:50%;background:#35d07f;margin-right:6px;animation:pulse 1.6s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.total{font-size:52px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-1px}
+.total small{font-size:14px;font-weight:600;color:#8ea0b8;letter-spacing:0}
+.split{display:flex;gap:10px;margin:14px 0}
+.pane{flex:1;background:#0e1626;border:1px solid #22304a;border-radius:10px;padding:12px}
+.pane .n{font-size:28px;font-weight:800}
+.pane .l{font-size:12px;color:#8ea0b8}
+.busn{color:#5aa2f0}.trainn{color:#f06a96}
+.bar{margin:7px 0}
+.bar .t{display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px}
+.bar .t b{font-variant-numeric:tabular-nums}
+.track{height:7px;background:#1b2740;border-radius:4px;overflow:hidden}
+.fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#1d5fb8,#5aa2f0)}
+.fill.train{background:linear-gradient(90deg,#b81d4e,#f06a96)}
+h2{font-size:13px;color:#8ea0b8;margin:14px 0 6px;text-transform:uppercase;letter-spacing:.5px}
+.foot{font-size:11px;color:#5c6f8a;margin-top:12px;text-align:right}
+</style></head><body>
+<div class="card">
+  <h1>CTA Fleet — Live</h1>
+  <div class="sub"><span class="live"></span>vehicles on the road right now</div>
+  <div class="total"><span id="total">—</span> <small>vehicles</small></div>
+  <div class="split">
+    <div class="pane"><div class="n busn" id="nb">—</div><div class="l">🚌 buses</div></div>
+    <div class="pane"><div class="n trainn" id="nt">—</div><div class="l">🚇 L trains</div></div>
+  </div>
+  <h2>Busiest bus routes</h2><div id="bb"></div>
+  <h2>Busiest L lines</h2><div id="tb"></div>
+  <div class="foot" id="stamp"></div>
+</div>
+<script>
+const API="__API_BASE__", KEY="";
+function bars(el, obj, cls){
+  const e=document.getElementById(el), ks=Object.keys(obj).slice(0,6);
+  const max=Math.max(...ks.map(k=>obj[k]),1);
+  e.innerHTML=ks.map(k=>`<div class="bar"><div class="t"><span>${k}</span><b>${obj[k]}</b></div>
+    <div class="track"><div class="fill ${cls}" style="width:${obj[k]/max*100}%"></div></div></div>`).join("")
+    || '<div style="color:#5c6f8a;font-size:13px">—</div>';
+}
+async function load(){
+  try{
+    const d=await (await fetch(`${API}/api/fleet`,{headers:KEY?{"X-API-Key":KEY}:{}})).json();
+    document.getElementById("total").textContent=d.total;
+    document.getElementById("nb").textContent=d.bus.count;
+    document.getElementById("nt").textContent=d.train.count;
+    bars("bb",d.bus.by_route,""); bars("tb",d.train.by_route,"train");
+    document.getElementById("stamp").textContent="Updated "+new Date().toLocaleTimeString();
+  }catch(e){}
+}
+load(); setInterval(load,30000);
+</script></body></html>
