@@ -113,7 +113,57 @@ def health():
 
 @app.get("/")
 def index():
-    return {"service": "chicago-transit-connector", "docs": "/docs", "health": "/health"}
+    from fastapi.responses import HTMLResponse
+    groups = [
+        ("Trains", [
+            ("Clark/Lake arrivals (live demo)", "/api/train/arrivals?mapid=40380&max=5"),
+            ("Red Line positions", "/api/train/positions?rt=Red"),
+            ("All trains", "/api/vehicles?mode=train"),
+            ("Fleet counts", "/api/fleet"),
+        ]),
+        ("Bus", [
+            ("Stop arrivals", "/api/bus/arrivals?stpid=8417&top=5"),
+            ("Route 22 vehicles", "/api/vehicles?mode=bus&rt=22"),
+            ("Fleet counts", "/api/fleet?rt=22,36"),
+        ]),
+        ("System", [
+            ("Health", "/health"),
+            ("Service alerts", "/api/alerts"),
+            ("Red Line alerts", "/api/alerts?rt=Red"),
+            ("Stops near Clark/Lake", "/api/nearby?lat=41.882&lon=-87.629&limit=5"),
+            ("All routes", "/api/routes"),
+            ("Red Line shape", "/api/shape?mode=train&rt=Red"),
+            ("Red vs Blue at Clark/Lake", "/api/compare?mode=train&mapid=40380&rt1=Red&rt2=Blue"),
+            ("API docs", "/docs"),
+        ]),
+    ]
+    cards = ""
+    for title, links in groups:
+        items = "".join(
+            f'<a class="link" href="{href}"><span class="name">{name}</span>'
+            f'<span class="url">{href}</span></a>' for name, href in links)
+        cards += f'<section><h2>{title}</h2><div class="links">{items}</div></section>'
+    html = f"""<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chicago Transit Connector</title>
+<style>
+body{{font-family:system-ui,-apple-system,sans-serif;background:#0b0e14;color:#e6e9f0;
+margin:0;padding:32px 20px;max-width:860px;margin-inline:auto}}
+h1{{font-size:26px;margin:0 0 4px}}p.sub{{color:#8b93a7;margin:0 0 28px}}
+h2{{font-size:15px;text-transform:uppercase;letter-spacing:.08em;color:#8b93a7;
+margin:26px 0 10px}}.links{{display:grid;gap:8px}}
+.link{{display:flex;flex-direction:column;gap:2px;background:#151a26;border:1px solid #232b3f;
+border-radius:10px;padding:12px 14px;text-decoration:none;transition:border-color .15s}}
+.link:hover{{border-color:#4f7cff}}.name{{color:#fff;font-weight:600;font-size:15px}}
+.url{{color:#5f6b8a;font-size:12.5px;font-family:ui-monospace,monospace;word-break:break-all}}
+footer{{margin-top:36px;color:#5f6b8a;font-size:12.5px}}
+footer a{{color:#4f7cff}}</style></head><body>
+<h1>🚇 Chicago Transit Connector</h1>
+<p class="sub">Live CTA data API — trains first, bus when the key lands. Click any endpoint.</p>
+{cards}
+<footer>Powered by CTA data · <a href="/docs">interactive API docs</a> ·
+<a href="/health">health</a></footer></body></html>"""
+    return HTMLResponse(html)
 
 
 @app.get("/api/vehicles")
